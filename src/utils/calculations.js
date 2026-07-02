@@ -107,7 +107,27 @@ export function buildCgpaLine(validSems) {
  * Determine difficulty label/color from target GPA
  */
 export function getDifficultyInfo(targetGpa) {
-  if (targetGpa >= 3.7) return { label: 'Hard', color: '#ef4444', emoji: '🔴' };
-  if (targetGpa >= 3.2) return { label: 'Moderate', color: '#f59e0b', emoji: '🟡' };
-  return { label: 'Easy', color: '#10b981', emoji: '🟢' };
+  if (targetGpa >= 3.7) return { label: 'Hard', color: '#ef4444', iconName: 'alert-circle' };
+  if (targetGpa >= 3.2) return { label: 'Moderate', color: '#f59e0b', iconName: 'warning' };
+  return { label: 'Easy', color: '#10b981', iconName: 'checkmark-circle' };
+}
+
+/**
+ * Identify courses with low grades (below C / < 2.0 points) across all semesters.
+ */
+export function getImprovementOpportunities(semesters) {
+  const lowCourses = [];
+  semesters.forEach(sem => {
+    if (sem.skipped || !sem.courses) return;
+    sem.courses.forEach(course => {
+      if (course.grade && course.grade.points < 2.0 && course.credits > 0) {
+        lowCourses.push({
+          ...course,
+          semesterName: sem.name,
+          semesterId: sem.id
+        });
+      }
+    });
+  });
+  return lowCourses;
 }
