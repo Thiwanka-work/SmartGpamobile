@@ -18,10 +18,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#1a1a3e",
+        "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "package": "com.thiwana.smartgpa",
       "versionCode": 1,
