@@ -2,7 +2,7 @@ import React from 'react';
 import { StatusBar, View, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 import { AppProvider, useApp } from './src/context/AppContext';
@@ -22,6 +22,7 @@ const Tab = createBottomTabNavigator();
 
 function MainNavigator() {
   const { appState, isDarkMode } = useApp();
+  const insets = useSafeAreaInsets();
   const bg = isDarkMode ? COLORS.bgDark2 : '#fff';
   const activeTint = COLORS.primary;
   const inactiveTint = isDarkMode ? COLORS.textMutedDark : COLORS.textMutedLight;
@@ -42,8 +43,8 @@ function MainNavigator() {
           backgroundColor: bg,
           borderTopColor: border,
           borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 8,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom + 4,
           paddingTop: 4,
         },
         tabBarActiveTintColor: activeTint,
