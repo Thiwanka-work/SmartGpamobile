@@ -1,13 +1,19 @@
 {
   "expo": {
-    "name": "SmartGpaCalApp",
+    "name": "SmartGPA",
     "slug": "SmartGpaCalApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#E6F4FE"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.thiwana.smartgpa"
     },
     "android": {
       "adaptiveIcon": {
@@ -16,10 +22,21 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.anonymous.SmartGpaCalApp"
+      "package": "com.thiwana.smartgpa",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e5c8b7f0-3e59-4b93-9a79-dab000c55879"
+      }
     }
   }
 }
