@@ -42,15 +42,12 @@ Whether you're trying to figure out if you can safely drop a class, aiming for t
 ## 📱 Screenshots
 
 <div align="center">
-  <img src="https://via.placeholder.com/250x500.png?text=Dashboard" width="200" alt="Dashboard" />
+  <img src="../Dashboard.jpg" width="200" alt="Dashboard" />
   &nbsp;&nbsp;&nbsp;
-  <img src="https://via.placeholder.com/250x500.png?text=Calculator" width="200" alt="Calculator" />
+  <img src="../Analytics.jpg" width="200" alt="Analytics" />
   &nbsp;&nbsp;&nbsp;
-  <img src="https://via.placeholder.com/250x500.png?text=Analytics" width="200" alt="Analytics" />
+  <img src="../Prediction.jpg" width="200" alt="Prediction" />
 </div>
-<p align="center">
-  <i>(Replace placeholder images with actual app screenshots)</i>
-</p>
 
 ## 🛠️ Installation & Setup
 
