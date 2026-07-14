@@ -9,6 +9,7 @@ import { AppProvider, useApp } from './src/context/AppContext';
 import { COLORS, FONT_SIZE } from './src/utils/theme';
 
 // Screens
+import LoginScreen from './src/screens/LoginScreen';
 import ProfileSetupScreen from './src/screens/ProfileSetupScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import CGPACalculatorScreen from './src/screens/CGPACalculatorScreen';
@@ -43,9 +44,9 @@ function MainNavigator() {
           backgroundColor: bg,
           borderTopColor: border,
           borderTopWidth: 1,
-          height: 60 + insets.bottom,
-          paddingBottom: insets.bottom + 4,
-          paddingTop: 4,
+          height: 65 + (insets.bottom > 0 ? insets.bottom : 10),
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
+          paddingTop: 8,
         },
         tabBarActiveTintColor: activeTint,
         tabBarInactiveTintColor: inactiveTint,
@@ -132,12 +133,21 @@ function LoadingScreen({ isDark }) {
 }
 
 function RootApp() {
-  const { isLoading, isDarkMode } = useApp();
+  const { isLoading, isDarkMode, user, isGuest } = useApp();
   const barStyle = isDarkMode ? 'light-content' : 'dark-content';
   const bgColor = isDarkMode ? COLORS.bgDark : COLORS.bgLight;
 
   if (isLoading) {
     return <LoadingScreen isDark={isDarkMode} />;
+  }
+
+  if (!user && !isGuest) {
+    return (
+      <>
+        <StatusBar barStyle={barStyle} backgroundColor={bgColor} />
+        <LoginScreen />
+      </>
+    );
   }
 
   return (

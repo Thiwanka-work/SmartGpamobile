@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
 import { DEFAULT_GRADING_SETTINGS, UNI_PRESETS } from '../utils/gradingData';
 
 const AppContext = createContext(null);
@@ -7,6 +10,7 @@ const AppContext = createContext(null);
 const STORAGE_KEY = 'smartGpa_v2';
 const SETTINGS_KEY = 'smartGpa_gradingSettings';
 const THEME_KEY = 'smartGpa_theme';
+const GUEST_KEY = 'smartGpa_guest';
 
 const defaultAppState = {
   studentName: '',
@@ -18,30 +22,66 @@ const defaultAppState = {
 };
 
 export function AppProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [isGuest, setIsGuest] = useState(false);
   const [appState, setAppState] = useState(defaultAppState);
   const [gradingSettings, setGradingSettings] = useState(DEFAULT_GRADING_SETTINGS);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load all data from storage on mount
   useEffect(() => {
-    loadFromStorage();
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        await loadData(currentUser.uid);
+      } else {
+        await loadLocalSettingsOnly();
+        setAppState(defaultAppState);
+        setIsLoading(false);
+      }
+    });
+    return unsubscribe;
   }, []);
 
-  async function loadFromStorage() {
+  async function loadData(uid) {
     try {
-      const [rawState, rawSettings, rawTheme] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEY),
-        AsyncStorage.getItem(SETTINGS_KEY),
-        AsyncStorage.getItem(THEME_KEY),
-      ]);
-
-      if (rawState) {
-        const parsed = JSON.parse(rawState);
+      await loadLocalSettingsOnly();
+      
+      const docRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const parsed = docSnap.data();
         if (parsed.totalSemesters === undefined) parsed.totalSemesters = 8;
         if (parsed.completedSemesters === undefined) parsed.completedSemesters = 0;
         if (!Array.isArray(parsed.semesters)) parsed.semesters = [];
         setAppState(parsed);
+      }
+    } catch (e) {
+      console.warn('Error loading from Firestore:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function loadLocalSettingsOnly() {
+    try {
+      const [rawSettings, rawTheme, rawGuest, rawState] = await Promise.all([
+        AsyncStorage.getItem(SETTINGS_KEY),
+        AsyncStorage.getItem(THEME_KEY),
+        AsyncStorage.getItem(GUEST_KEY),
+        AsyncStorage.getItem(STORAGE_KEY),
+      ]);
+
+      if (rawGuest === 'true') {
+        setIsGuest(true);
+        if (rawState) {
+          const parsed = JSON.parse(rawState);
+          if (parsed.totalSemesters === undefined) parsed.totalSemesters = 8;
+          if (parsed.completedSemesters === undefined) parsed.completedSemesters = 0;
+          if (!Array.isArray(parsed.semesters)) parsed.semesters = [];
+          setAppState(parsed);
+        }
       }
 
       if (rawSettings) {
@@ -58,19 +98,44 @@ export function AppProvider({ children }) {
         setIsDarkMode(rawTheme === 'dark');
       }
     } catch (e) {
-      console.warn('Error loading from storage:', e);
-    } finally {
-      setIsLoading(false);
+      console.warn('Error loading settings from storage:', e);
     }
   }
 
   async function saveAppState(newState) {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+      
+      if (user) {
+        await setDoc(doc(db, 'users', user.uid), newState);
+      }
     } catch (e) {
-      console.warn('Error saving app state:', e);
+      console.warn('Error saving app state to Firestore:', e);
     }
   }
+
+  const continueAsGuest = useCallback(async () => {
+    try {
+      setIsGuest(true);
+      await AsyncStorage.setItem(GUEST_KEY, 'true');
+    } catch (e) {
+      console.warn('Error saving guest state:', e);
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      if (user) {
+        await signOut(auth);
+      } else {
+        setIsGuest(false);
+        await AsyncStorage.removeItem(GUEST_KEY);
+        setAppState(defaultAppState);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  }, [user]);
 
   async function saveGradingSettings(newSettings) {
     try {
@@ -163,6 +228,8 @@ export function AppProvider({ children }) {
   }, []);
 
   const value = {
+    user,
+    isGuest,
     appState,
     gradingSettings,
     isDarkMode,
@@ -175,6 +242,8 @@ export function AppProvider({ children }) {
     updateGradingSettings,
     toggleTheme,
     resetAll,
+    logout,
+    continueAsGuest,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

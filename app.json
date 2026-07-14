@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#E6F4FE"
+      "backgroundColor": "#121226"
     },
     "ios": {
       "supportsTablet": true,
@@ -18,8 +18,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#1a1a3e",
-        "foregroundImage": "./assets/android-icon-foreground.png"
+        "backgroundColor": "#121226",
+        "foregroundImage": "./assets/icon.png"
       },
       "package": "com.thiwana.smartgpa",
       "versionCode": 1,
@@ -36,6 +36,9 @@
       "eas": {
         "projectId": "e5c8b7f0-3e59-4b93-9a79-dab000c55879"
       }
-    }
+    },
+    "plugins": [
+      "expo-web-browser"
+    ]
   }
 }
