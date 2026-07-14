@@ -42,11 +42,11 @@ Whether you're trying to figure out if you can safely drop a class, aiming for t
 ## 📱 Screenshots
 
 <div align="center">
-  <img src="../Dashboard.jpg" width="200" alt="Dashboard" />
+  <img src="assets/Dashboard.jpg" width="200" alt="Dashboard" />
   &nbsp;&nbsp;&nbsp;
-  <img src="../Analytics.jpg" width="200" alt="Analytics" />
+  <img src="assets/Analytics.jpg" width="200" alt="Analytics" />
   &nbsp;&nbsp;&nbsp;
-  <img src="../Prediction.jpg" width="200" alt="Prediction" />
+  <img src="assets/Prediction.jpg" width="200" alt="Prediction" />
 </div>
 
 ## 🛠️ Installation & Setup
