@@ -35,8 +35,10 @@ export function AppProvider({ children }) {
       if (currentUser) {
         await loadData(currentUser.uid);
       } else {
-        await loadLocalSettingsOnly();
-        setAppState(defaultAppState);
+        const local = await loadLocalSettingsOnly();
+        if (!local.isGuest) {
+          setAppState(defaultAppState);
+        }
         setIsLoading(false);
       }
     });
@@ -65,6 +67,7 @@ export function AppProvider({ children }) {
   }
 
   async function loadLocalSettingsOnly() {
+    let isGuestUser = false;
     try {
       const [rawSettings, rawTheme, rawGuest, rawState] = await Promise.all([
         AsyncStorage.getItem(SETTINGS_KEY),
@@ -74,6 +77,7 @@ export function AppProvider({ children }) {
       ]);
 
       if (rawGuest === 'true') {
+        isGuestUser = true;
         setIsGuest(true);
         if (rawState) {
           const parsed = JSON.parse(rawState);
@@ -100,6 +104,7 @@ export function AppProvider({ children }) {
     } catch (e) {
       console.warn('Error loading settings from storage:', e);
     }
+    return { isGuest: isGuestUser };
   }
 
   async function saveAppState(newState) {

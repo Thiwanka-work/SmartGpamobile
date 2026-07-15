@@ -2,6 +2,7 @@
   "expo": {
     "name": "SmartGPA",
     "slug": "SmartGpaCalApp",
+    "scheme": "smartgpacalapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "jsEngine": "hermes",
@@ -12,6 +13,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#121226"
     },
+    "assetBundlePatterns": [
+      "assets/**"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.thiwana.smartgpa"
@@ -22,7 +26,6 @@
         "foregroundImage": "./assets/icon.png"
       },
       "package": "com.thiwana.smartgpa",
-      "versionCode": 1,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.READ_EXTERNAL_STORAGE",

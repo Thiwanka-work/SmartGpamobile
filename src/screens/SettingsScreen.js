@@ -14,7 +14,7 @@ const PRESET_KEYS = Object.keys(UNI_PRESETS);
 export default function SettingsScreen({ navigation }) {
   const {
     appState, gradingSettings, isDarkMode,
-    applyGradingPreset, toggleTheme, resetAll,
+    applyGradingPreset, toggleTheme, resetAll, logout,
   } = useApp();
   const theme = isDarkMode ? darkTheme : lightTheme;
 
@@ -62,6 +62,9 @@ export default function SettingsScreen({ navigation }) {
               {appState.semesters.length} semesters · {appState.totalCredits} total credits
             </Text>
           </View>
+          <TouchableOpacity style={[styles.logoutBtn, { borderColor: COLORS.danger }]} onPress={logout}>
+            <Ionicons name="log-out-outline" size={20} color={COLORS.danger} />
+          </TouchableOpacity>
         </View>
 
         {/* Appearance */}
@@ -174,9 +177,10 @@ const styles = StyleSheet.create({
   profileCard: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, flexDirection: 'row', alignItems: 'center', gap: SPACING.md, ...SHADOW.sm },
   avatarGrad: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#fff', fontSize: FONT_SIZE.xxl, fontWeight: '800' },
-  profileInfo: {},
+  profileInfo: { flex: 1 },
   profileName: { fontSize: FONT_SIZE.xl, fontWeight: '700' },
   profileSub: { fontSize: FONT_SIZE.sm, marginTop: 2 },
+  logoutBtn: { padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   section: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, ...SHADOW.sm },
   sectionTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700', marginBottom: SPACING.sm },
   sectionSub: { fontSize: FONT_SIZE.sm, marginBottom: SPACING.md },
