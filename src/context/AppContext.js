@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { DEFAULT_GRADING_SETTINGS, UNI_PRESETS } from '../utils/gradingData';
 
@@ -321,7 +321,7 @@ export function AppProvider({ children }) {
     });
   }, []);
 
-  // ── Reset All ─────────────────────────────────────────────────
+  // ── Reset All / Delete Account ──────────────────────────────
   const resetAll = useCallback(async () => {
     const freshState = {
       ...defaultAppState,
@@ -329,6 +329,30 @@ export function AppProvider({ children }) {
     };
     setAppState(freshState);
     await saveAppState(freshState);
+  }, []);
+
+  const deleteAccount = useCallback(async () => {
+    try {
+      if (userRef.current) {
+        await deleteDoc(doc(db, 'users', userRef.current.uid));
+      }
+      const freshState = {
+        ...defaultAppState,
+        semesters: [],
+      };
+      setAppState(freshState);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(freshState));
+      
+      if (userRef.current) {
+        await signOut(auth);
+      } else {
+        setIsGuest(false);
+        await AsyncStorage.removeItem(GUEST_KEY);
+      }
+    } catch (e) {
+      console.warn('Error deleting account:', e);
+      throw e;
+    }
   }, []);
 
   const value = {
@@ -346,6 +370,7 @@ export function AppProvider({ children }) {
     updateGradingSettings,
     toggleTheme,
     resetAll,
+    deleteAccount,
     logout,
     continueAsGuest,
   };

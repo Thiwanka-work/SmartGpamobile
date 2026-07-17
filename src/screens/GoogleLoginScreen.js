@@ -82,6 +82,13 @@ export default function GoogleLoginScreen({ navigation }) {
           Securely back up your GPA, semesters, and prediction data to the cloud using your Google account.
         </Text>
 
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.xl }}>
+          <Ionicons name="lock-closed" size={14} color={COLORS.success} />
+          <Text style={{ fontSize: FONT_SIZE.xs, color: textMuted, marginLeft: 6 }}>
+            Your data is securely stored and never shared with third parties.
+          </Text>
+        </View>
+
         {googleError ? (
           <View style={styles.errorBox}>
             <Ionicons name="alert-circle" size={20} color={COLORS.danger} />

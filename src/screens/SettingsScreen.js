@@ -17,7 +17,7 @@ const PRESET_KEYS = Object.keys(UNI_PRESETS);
 export default function SettingsScreen({ navigation }) {
   const {
     user, isGuest, appState, gradingSettings, isDarkMode,
-    applyGradingPreset, toggleTheme, resetAll, logout,
+    applyGradingPreset, toggleTheme, resetAll, deleteAccount, logout,
   } = useApp();
   const theme = isDarkMode ? darkTheme : lightTheme;
 
@@ -49,19 +49,29 @@ export default function SettingsScreen({ navigation }) {
 
   function handleReset() {
     Alert.alert(
-      '⚠️ Reset All Data',
-      'This will permanently erase ALL your academic records. Are you sure?',
+      '⚠️ Delete Account & Data',
+      'This will permanently erase ALL your academic records and delete your account. Are you sure?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Reset Everything',
+          text: 'Delete Everything',
           style: 'destructive',
           onPress: async () => {
-            await resetAll();
-            navigation.navigate('Dashboard');
+            try {
+              await deleteAccount();
+            } catch (e) {
+              Alert.alert('Error', 'Could not delete account data.');
+            }
           },
         },
       ]
+    );
+  }
+
+  function handlePrivacyPolicy() {
+    Alert.alert(
+      'Privacy Policy',
+      'Your data is securely backed up (if logged in) and is never shared, sold, or used by third parties. Your academic records remain strictly private and accessible only by you.'
     );
   }
 
@@ -97,9 +107,9 @@ export default function SettingsScreen({ navigation }) {
           )}
         </View>
 
-        {/* Appearance */}
+        {/* Appearance & Privacy */}
         <View style={[styles.section, { backgroundColor: theme.card }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Appearance</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Settings</Text>
           <View style={styles.settingRow}>
             <View>
               <Text style={[styles.settingLabel, { color: theme.text }]}>Dark Mode</Text>
@@ -111,6 +121,16 @@ export default function SettingsScreen({ navigation }) {
               trackColor={{ false: COLORS.borderLight, true: COLORS.primary + '80' }}
               thumbColor={isDarkMode ? COLORS.primary : '#f4f3f4'}
             />
+          </View>
+          
+          <View style={[styles.settingRow, { marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: theme.border }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.settingLabel, { color: theme.text }]}>Privacy Policy</Text>
+              <Text style={[styles.settingSub, { color: theme.textMuted }]}>Read how we protect your data</Text>
+            </View>
+            <TouchableOpacity onPress={handlePrivacyPolicy} style={[styles.logoutBtn, { borderColor: theme.border }]}>
+              <Text style={{ color: theme.text, fontSize: 13, fontWeight: '600' }}>View</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -181,12 +201,12 @@ export default function SettingsScreen({ navigation }) {
             <Text style={[styles.dangerTitle, { color: COLORS.danger, marginBottom: 0 }]}>Danger Zone</Text>
           </View>
           <Text style={[styles.dangerDesc, { color: theme.textMuted }]}>
-            Permanently delete all your academic records and start fresh. This cannot be undone.
+            Permanently delete your account and all academic records. This cannot be undone.
           </Text>
           <TouchableOpacity style={[styles.resetBtn, { borderColor: COLORS.danger }]} onPress={handleReset}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Ionicons name="trash" size={20} color={COLORS.danger} />
-              <Text style={[styles.resetBtnText, { color: COLORS.danger }]}>Reset All Data</Text>
+              <Text style={[styles.resetBtnText, { color: COLORS.danger }]}>Delete My Account & Data</Text>
             </View>
           </TouchableOpacity>
         </View>
