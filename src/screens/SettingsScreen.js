@@ -8,15 +8,33 @@ import { useApp } from '../context/AppContext';
 import { getClassificationColor } from '../utils/calculations';
 import { UNI_PRESETS } from '../utils/gradingData';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, SHADOW } from '../utils/theme';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import { auth } from '../config/firebase';
 
 const PRESET_KEYS = Object.keys(UNI_PRESETS);
 
 export default function SettingsScreen({ navigation }) {
   const {
-    appState, gradingSettings, isDarkMode,
+    user, isGuest, appState, gradingSettings, isDarkMode,
     applyGradingPreset, toggleTheme, resetAll, logout,
   } = useApp();
   const theme = isDarkMode ? darkTheme : lightTheme;
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const signInResult = await GoogleSignin.signIn();
+      let idToken = signInResult.data?.idToken || signInResult.idToken;
+      if (idToken) {
+        const googleCredential = GoogleAuthProvider.credential(idToken);
+        await signInWithCredential(auth, googleCredential);
+      }
+    } catch (error) {
+      console.error('Google Auth Error:', error);
+      Alert.alert('Sign In Failed', error.message);
+    }
+  };
 
   function handlePreset(key) {
     Alert.alert(
@@ -57,14 +75,26 @@ export default function SettingsScreen({ navigation }) {
             <Text style={styles.avatarText}>{appState.studentName ? appState.studentName.charAt(0).toUpperCase() : '?'}</Text>
           </LinearGradient>
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: theme.text }]}>{appState.studentName || 'Not Set'}</Text>
+            <Text style={[styles.profileName, { color: theme.text }]}>{appState.studentName || 'Guest'}</Text>
             <Text style={[styles.profileSub, { color: theme.textMuted }]}>
               {appState.semesters.length} semesters · {appState.totalCredits} total credits
             </Text>
+            {(isGuest || !user) && (
+              <Text style={{ color: COLORS.primary, fontSize: 12, marginTop: 4, fontWeight: '600' }}>
+                Local Data Only
+              </Text>
+            )}
           </View>
-          <TouchableOpacity style={[styles.logoutBtn, { borderColor: COLORS.danger }]} onPress={logout}>
-            <Ionicons name="log-out-outline" size={20} color={COLORS.danger} />
-          </TouchableOpacity>
+          {(isGuest || !user) ? (
+            <TouchableOpacity style={[styles.logoutBtn, { borderColor: COLORS.primary, backgroundColor: COLORS.primary + '10', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12 }]} onPress={handleGoogleSignIn}>
+              <Ionicons name="logo-google" size={16} color={COLORS.primary} />
+              <Text style={{ color: COLORS.primary, fontSize: 13, fontWeight: '700' }}>Sign In</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={[styles.logoutBtn, { borderColor: COLORS.danger, backgroundColor: COLORS.danger + '10' }]} onPress={logout}>
+              <Ionicons name="log-out-outline" size={20} color={COLORS.danger} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Appearance */}

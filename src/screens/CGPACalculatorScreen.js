@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ScrollView, Alert, KeyboardAvoidingView, Platform,
@@ -18,6 +18,11 @@ export default function CGPACalculatorScreen({ navigation }) {
   const [semCredits, setSemCredits] = useState('');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+
+  // FIX: Keep semName in sync with the actual number of semesters
+  useEffect(() => {
+    setSemName(`Semester ${appState.semesters.length + 1}`);
+  }, [appState.semesters.length]);
 
   const cgpa = calcCGPA(appState.semesters);
   const completedCredits = calcCompletedCredits(appState.semesters);
@@ -45,8 +50,7 @@ export default function CGPACalculatorScreen({ navigation }) {
     setLoading(true);
     try {
       await addSemester({ name, gpa: skipped ? null : gpa, credits, skipped, skipReason: '' });
-      const nextNum = appState.semesters.length + 2;
-      setSemName(`Semester ${nextNum}`);
+      // FIX: Reset form fields — semName auto-updates via useEffect
       setSemGpa('');
       setSemCredits('');
     } finally {

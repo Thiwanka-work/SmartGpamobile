@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, KeyboardAvoidingView, Platform,
@@ -22,6 +22,11 @@ export default function GPACalculatorScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const [semName, setSemName] = useState(`Semester ${appState.semesters.length + 1}`);
   const [saved, setSaved] = useState(false);
+
+  // FIX: Keep semName in sync with the actual number of semesters
+  useEffect(() => {
+    setSemName(`Semester ${appState.semesters.length + 1}`);
+  }, [appState.semesters.length]);
 
   const semGpa = calcSemesterGPA(courses);
   const totalCredits = courses.reduce((acc, c) => acc + c.credits, 0);

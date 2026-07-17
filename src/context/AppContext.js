@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -29,9 +29,14 @@ export function AppProvider({ children }) {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Use a ref to always have the latest user in callbacks without re-creating them
+  const userRef = useRef(null);
+  useEffect(() => { userRef.current = user; }, [user]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      userRef.current = currentUser;
       if (currentUser) {
         await loadData(currentUser.uid);
       } else {
@@ -47,22 +52,96 @@ export function AppProvider({ children }) {
 
   async function loadData(uid) {
     try {
-      await loadLocalSettingsOnly();
-      
-      const docRef = doc(db, 'users', uid);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        const parsed = docSnap.data();
+      // ── STEP 1: Load from LOCAL CACHE first (fast ~50ms) ──────────
+      // This makes the app appear instantly — no waiting for the network
+      const [rawSettings, rawTheme, rawGuest, rawState] = await Promise.all([
+        AsyncStorage.getItem(SETTINGS_KEY),
+        AsyncStorage.getItem(THEME_KEY),
+        AsyncStorage.getItem(GUEST_KEY),
+        AsyncStorage.getItem(STORAGE_KEY),
+      ]);
+
+      // IMPORTANT: remember if this was a guest login BEFORE we clear the flag
+      const wasGuest = rawGuest === 'true';
+
+      // Apply cached theme immediately
+      if (rawTheme) setIsDarkMode(rawTheme === 'dark');
+
+      // Apply cached grading settings
+      if (rawSettings) {
+        const parsed = JSON.parse(rawSettings);
+        setGradingSettings({
+          preset: parsed.preset || 'sliit',
+          grades: parsed.grades || DEFAULT_GRADING_SETTINGS.grades,
+          classifications: parsed.classifications || DEFAULT_GRADING_SETTINGS.classifications,
+          maxGpa: parsed.maxGpa || 4.0,
+        });
+      }
+
+      // Apply cached app data (semesters, profile, etc.)
+      if (rawState) {
+        const parsed = JSON.parse(rawState);
         if (parsed.totalSemesters === undefined) parsed.totalSemesters = 8;
         if (parsed.completedSemesters === undefined) parsed.completedSemesters = 0;
         if (!Array.isArray(parsed.semesters)) parsed.semesters = [];
         setAppState(parsed);
       }
-    } catch (e) {
-      console.warn('Error loading from Firestore:', e);
-    } finally {
+
+      // ── SHOW THE APP NOW — don't wait for Firestore ────────────────
+      setIsGuest(false);
+      AsyncStorage.removeItem(GUEST_KEY).catch(() => {});
       setIsLoading(false);
+
+      // ── STEP 2: Sync from FIRESTORE in the background ──────────────
+      // Pass wasGuest so we know to PUSH local data instead of pulling from cloud
+      syncFromFirestore(uid, rawState, wasGuest);
+
+    } catch (e) {
+      console.warn('Error loading from cache:', e);
+      setIsLoading(false);
+    }
+  }
+
+  async function syncFromFirestore(uid, cachedRaw, wasGuest) {
+    try {
+      const docRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(docRef);
+
+      if (wasGuest) {
+        // ── GUEST LOGIN: Always push local data to cloud ──────────────
+        // The local guest data is always more up-to-date than the cloud.
+        // Never overwrite local data with cloud data during guest→login transition.
+        if (cachedRaw) {
+          const localParsed = JSON.parse(cachedRaw);
+          setDoc(docRef, localParsed).catch((e) => {
+            console.warn('Error uploading guest data to Firestore:', e);
+          });
+        }
+      } else if (docSnap.exists()) {
+        // ── RETURNING USER: Pull cloud data only if different from cache ──
+        const cloudData = docSnap.data();
+        if (cloudData.totalSemesters === undefined) cloudData.totalSemesters = 8;
+        if (cloudData.completedSemesters === undefined) cloudData.completedSemesters = 0;
+        if (!Array.isArray(cloudData.semesters)) cloudData.semesters = [];
+
+        const cloudJson = JSON.stringify(cloudData);
+        if (cloudJson !== cachedRaw) {
+          // Cloud has newer data (e.g. user logged in on another device)
+          setAppState(cloudData);
+          AsyncStorage.setItem(STORAGE_KEY, cloudJson).catch(() => {});
+        }
+      } else {
+        // ── NEW USER (no guest data, no cloud doc) ──────────────────────
+        if (cachedRaw) {
+          const localParsed = JSON.parse(cachedRaw);
+          setDoc(docRef, localParsed).catch((e) => {
+            console.warn('Error uploading data to Firestore:', e);
+          });
+        }
+      }
+    } catch (e) {
+      // Network error — app already running from cache, so this is fine
+      console.warn('Background Firestore sync failed (offline?):', e);
     }
   }
 
@@ -107,15 +186,21 @@ export function AppProvider({ children }) {
     return { isGuest: isGuestUser };
   }
 
+  // FIX: Save locally first (instant), then sync to Firestore in background (non-blocking)
   async function saveAppState(newState) {
     try {
+      // Save to local cache immediately — this makes UI feel instant
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-      
-      if (user) {
-        await setDoc(doc(db, 'users', user.uid), newState);
-      }
     } catch (e) {
-      console.warn('Error saving app state to Firestore:', e);
+      console.warn('Error saving to AsyncStorage:', e);
+    }
+
+    // Fire-and-forget Firestore sync — does NOT block the UI
+    const currentUser = userRef.current;
+    if (currentUser) {
+      setDoc(doc(db, 'users', currentUser.uid), newState).catch((e) => {
+        console.warn('Error syncing to Firestore (will retry on next save):', e);
+      });
     }
   }
 
@@ -130,7 +215,7 @@ export function AppProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      if (user) {
+      if (userRef.current) {
         await signOut(auth);
       } else {
         setIsGuest(false);
@@ -140,7 +225,7 @@ export function AppProvider({ children }) {
     } catch (error) {
       console.error('Logout error:', error);
     }
-  }, [user]);
+  }, []);
 
   async function saveGradingSettings(newSettings) {
     try {
@@ -152,49 +237,61 @@ export function AppProvider({ children }) {
 
   // ── Profile Setup ─────────────────────────────────────────────
   const setupProfile = useCallback(async ({ studentName, totalCredits, totalSemesters, completedSemesters }) => {
-    const newState = {
-      ...appState,
-      studentName,
-      totalCredits,
-      totalSemesters,
-      completedSemesters,
-      profileSetup: true,
-    };
-    setAppState(newState);
-    await saveAppState(newState);
-  }, [appState]);
+    setAppState(prev => {
+      const newState = {
+        ...prev,
+        studentName,
+        totalCredits,
+        totalSemesters,
+        completedSemesters,
+        profileSetup: true,
+      };
+      saveAppState(newState);
+      return newState;
+    });
+  }, []);
 
   // ── Semester CRUD ─────────────────────────────────────────────
+  // FIX: Use functional setState to always operate on the latest state,
+  // avoiding stale closure issues entirely.
   const addSemester = useCallback(async (semester) => {
-    const newSemester = {
-      id: Date.now(),
-      semNumber: appState.semesters.length + 1,
-      ...semester,
-    };
-    const newState = {
-      ...appState,
-      semesters: [...appState.semesters, newSemester],
-    };
-    setAppState(newState);
-    await saveAppState(newState);
-    return newSemester;
-  }, [appState]);
+    return new Promise((resolve) => {
+      setAppState(prev => {
+        const newSemester = {
+          id: Date.now(),
+          semNumber: prev.semesters.length + 1,
+          ...semester,
+        };
+        const newState = {
+          ...prev,
+          semesters: [...prev.semesters, newSemester],
+        };
+        saveAppState(newState);
+        resolve(newSemester);
+        return newState;
+      });
+    });
+  }, []);
 
   const editSemester = useCallback(async (id, updates) => {
-    const newSemesters = appState.semesters.map(s =>
-      s.id === id ? { ...s, ...updates } : s
-    );
-    const newState = { ...appState, semesters: newSemesters };
-    setAppState(newState);
-    await saveAppState(newState);
-  }, [appState]);
+    setAppState(prev => {
+      const newSemesters = prev.semesters.map(s =>
+        s.id === id ? { ...s, ...updates } : s
+      );
+      const newState = { ...prev, semesters: newSemesters };
+      saveAppState(newState);
+      return newState;
+    });
+  }, []);
 
   const deleteSemester = useCallback(async (id) => {
-    const newSemesters = appState.semesters.filter(s => s.id !== id);
-    const newState = { ...appState, semesters: newSemesters };
-    setAppState(newState);
-    await saveAppState(newState);
-  }, [appState]);
+    setAppState(prev => {
+      const newSemesters = prev.semesters.filter(s => s.id !== id);
+      const newState = { ...prev, semesters: newSemesters };
+      saveAppState(newState);
+      return newState;
+    });
+  }, []);
 
   // ── Grading Settings ──────────────────────────────────────────
   const applyGradingPreset = useCallback(async (presetKey) => {
@@ -217,10 +314,12 @@ export function AppProvider({ children }) {
 
   // ── Theme ─────────────────────────────────────────────────────
   const toggleTheme = useCallback(async () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    await AsyncStorage.setItem(THEME_KEY, newMode ? 'dark' : 'light');
-  }, [isDarkMode]);
+    setIsDarkMode(prev => {
+      const newMode = !prev;
+      AsyncStorage.setItem(THEME_KEY, newMode ? 'dark' : 'light').catch(() => {});
+      return newMode;
+    });
+  }, []);
 
   // ── Reset All ─────────────────────────────────────────────────
   const resetAll = useCallback(async () => {

@@ -1,89 +1,68 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, SafeAreaView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { makeRedirectUri } from 'expo-auth-session';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { COLORS, FONT_SIZE, BORDER_RADIUS, SPACING, SHADOW } from '../utils/theme';
 import { useApp } from '../context/AppContext';
 
-WebBrowser.maybeCompleteAuthSession();
+// Configure Google Sign-In outside the component
+GoogleSignin.configure({
+  webClientId: '72803003814-8aknc89cc4e2v13puj51sgqurc0tgtgs.apps.googleusercontent.com',
+  // offlineAccess: true,
+});
 
 export default function GoogleLoginScreen({ navigation }) {
   const { isDarkMode } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [googleError, setGoogleError] = useState(null);
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: '72803003814-8aknc89cc4e2v13puj51sgqurc0tgtgs.apps.googleusercontent.com',
-    webClientId: '72803003814-8aknc89cc4e2v13puj51sgqurc0tgtgs.apps.googleusercontent.com',
-    androidClientId: '72803003814-kok41g1eupj32mk7oll29er7fhua9c0k.apps.googleusercontent.com',
-    redirectUri: makeRedirectUri({
-      scheme: 'smartgpacalapp'
-    }),
-  });
-
-  useEffect(() => {
-    if (!response) return;
-
-    if (response.type === 'success') {
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
       setGoogleError(null);
-      const idToken =
-        response.authentication?.idToken || response.params?.id_token || null;
-      const accessToken =
-        response.authentication?.accessToken ||
-        response.params?.access_token ||
-        null;
+      
+      // Check if your device supports Google Play Services
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      
+      // signIn() will:
+      // - Show the account chooser on FIRST login (no cached account)
+      // - Auto-select the previously used account on subsequent manual logins
+      // Auto-login on app open is handled by Firebase Auth + AsyncStorage (no Google call needed)
+      const signInResult = await GoogleSignin.signIn();
+      // the new api (v13+) returns signInResult.data.idToken
+      let idToken = signInResult.data?.idToken || signInResult.idToken;
 
-      if (!idToken && !accessToken) {
+      if (!idToken) {
         setGoogleError('Could not retrieve sign-in tokens. Please use Guest mode.');
         setIsLoading(false);
         return;
       }
 
-      try {
-        const credential = GoogleAuthProvider.credential(idToken, accessToken);
-        setIsLoading(true);
-        signInWithCredential(auth, credential).catch((error) => {
-          console.error('Firebase Auth Error:', error);
-          setIsLoading(false);
-          setGoogleError('Sign-in failed: ' + error.message);
-        });
-      } catch (err) {
-        console.error('Credential Error:', err);
-        setGoogleError('An error occurred. Please use Guest mode instead.');
-        setIsLoading(false);
-      }
-    } else if (response.type === 'error') {
-      console.error('Google Auth Error:', response.error);
-      setIsLoading(false);
-      setGoogleError(
-        'Google Sign-In is not configured for this device. Please continue as Guest.'
-      );
-    } else if (response.type === 'cancel') {
-      setIsLoading(false);
-    }
-  }, [response]);
+      // Create a Google credential with the token
+      const googleCredential = GoogleAuthProvider.credential(idToken);
 
-  const handleGoogleSignIn = async () => {
-    if (!request) {
-      Alert.alert(
-        'Not Available',
-        'Google Sign-In is not available on this device. Please continue as Guest.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-    try {
-      setIsLoading(true);
-      setGoogleError(null);
-      await promptAsync();
-    } catch (err) {
-      console.error('promptAsync error:', err);
-      setGoogleError('Google Sign-In failed. Please continue as Guest.');
+      // Sign-in the user with the credential
+      await signInWithCredential(auth, googleCredential);
+      
+      // We don't need to setIsLoading(false) because the auth state listener will navigate us away
+    } catch (error) {
       setIsLoading(false);
+      console.error('Google Auth Error:', error);
+      
+      if (error.code === statusCodes?.SIGN_IN_CANCELLED || (error.message && error.message.includes('CANCELLED'))) {
+        // user cancelled the login flow
+      } else if (error.code === statusCodes?.IN_PROGRESS || (error.message && error.message.includes('IN_PROGRESS'))) {
+        // operation (e.g. sign in) is in progress already
+        setGoogleError('Sign-in is already in progress.');
+      } else if (error.code === statusCodes?.PLAY_SERVICES_NOT_AVAILABLE || (error.message && error.message.includes('NOT_AVAILABLE'))) {
+        // play services not available or outdated
+        setGoogleError('Google Play Services is not available. Please continue as Guest.');
+      } else {
+        // some other error happened
+        setGoogleError('Sign-in failed: ' + error.message);
+      }
     }
   };
 
