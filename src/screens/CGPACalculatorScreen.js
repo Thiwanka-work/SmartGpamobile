@@ -38,7 +38,7 @@ export default function CGPACalculatorScreen({ navigation }) {
     const skipped = gpaRaw === '' || gpa === null;
 
     if (!name) newErrors.name = 'Semester name is required';
-    if (!skipped && (isNaN(gpa) || gpa < 0 || gpa > 4)) newErrors.gpa = 'GPA must be between 0.0 and 4.0';
+    if (!skipped && (isNaN(gpa) || gpa < 0 || gpa > gradingSettings.maxGpa)) newErrors.gpa = `GPA must be between 0.0 and ${gradingSettings.maxGpa}`;
     if (isNaN(credits) || credits < 1 || credits > 60) newErrors.credits = 'Credits must be between 1 and 60';
 
     if (Object.keys(newErrors).length > 0) {
@@ -120,7 +120,7 @@ export default function CGPACalculatorScreen({ navigation }) {
 
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.label, { color: theme.textMuted }]}>GPA (0.0 – 4.0)</Text>
+                <Text style={[styles.label, { color: theme.textMuted }]}>GPA (0.0 – {gradingSettings.maxGpa})</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: errors.gpa ? COLORS.danger : theme.border }]}
                   value={semGpa}

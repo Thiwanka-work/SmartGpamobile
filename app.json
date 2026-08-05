@@ -10,8 +10,8 @@
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#121226"
+      "resizeMode": "cover",
+      "backgroundColor": "#0f172a"
     },
     "assetBundlePatterns": [
       "assets/**"
@@ -22,14 +22,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#121226",
+        "backgroundColor": "#0f172a",
         "foregroundImage": "./assets/icon.png"
       },
       "package": "com.thiwana.smartgpa",
+      "enableProguardInReleaseBuilds": true,
+      "enableShrinkResourcesInReleaseBuilds": true,
       "permissions": [
-        "android.permission.INTERNET",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.INTERNET"
       ]
     },
     "web": {
@@ -42,7 +42,8 @@
     },
     "plugins": [
       "expo-web-browser",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "expo-splash-screen"
     ]
   }
 }

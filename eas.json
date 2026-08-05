@@ -18,6 +18,16 @@
         "APP_ENV": "preview"
       }
     },
+    "preview-optimized": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "APP_ENV": "preview"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "android": {
